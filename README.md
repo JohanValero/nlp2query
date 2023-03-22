@@ -35,8 +35,9 @@ TB_NETFLIX_DATA (
 )
 ```
 
-Un ejemplo de uso es preguntar: Dime todos los filmes que hayan sido grabadas en Colombia
-Esto PUEDE generar la siguiente consulta:
+Un ejemplo de uso es preguntar: Dime todos los filmes que hayan sido grabadas en Colombia.
+
+Esto TAL VEZ PUEDE generar la siguiente consulta:
 ```sql
 SELECT * FROM TB_NETFLIX_DATA WHERE country LIKE '%Colombia%'
 ```
