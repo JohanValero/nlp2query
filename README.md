@@ -9,11 +9,10 @@ Opcionalmente se recomienda un editor de código como Visual Studio Code.
 
 Se abre una consola de comandos o terminal en la carpeta del proyecto y se ejecuta los siguientes comandos:
 
-```
-pip install -r requirements.txt
-```
+Se debe definir la variable de sesión OPENAI_API_KEY, con la clave del API_KEY generado por OpenAI.
 
 ```
+pip install -r requirements.txt
 python main.py
 ```
 
