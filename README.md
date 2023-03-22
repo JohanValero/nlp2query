@@ -1,8 +1,8 @@
-### nlp2query
+# nlp2query
 
 Transforma una pregunta en lenguaje natural a una consulta SQL en la base de datos.
 
-# Instalación
+### Instalación
 
 Se debe tener instalado Python.
 Opcionalmente se recomienda un editor de código como Visual Studio Code.
