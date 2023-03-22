@@ -9,8 +9,13 @@ Opcionalmente se recomienda un editor de código como Visual Studio Code.
 
 Se abre una consola de comandos o terminal en la carpeta del proyecto y se ejecuta los siguientes comandos:
 
-* pip install -r requirements.txt
-* python3 main.py (en caso de no funcionar se puede ejecutar: python main.py)
+```
+pip install -r requirements.txt
+```
+
+```
+python main.py
+```
 
 Esto abrirá una ventana que permitirá ingresar una pregunta en lenguaje natural que consultará en la siguiente base de datos en SQLLite:
 
