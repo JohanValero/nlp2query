@@ -29,7 +29,7 @@ def nlp2sql(iPromptUser):
         model="gpt-3.5-turbo",
         messages=[
                 {"role": "system", "content": "Tu eres un bot que genera querys de SQLLite en JSON usando una entrada de texto en Español"},
-                {"role": "user", "content": """Tu tabla es TB_NETFLIX_DATA (show_id,type,title,director,cast,country,date_added,release_year,rating,duration,listed_in,description), dime todos los filmes que tegan un director nulo. Con la consulta en un JSON."""},
+                {"role": "user", "content": """Tu tabla es TB_NETFLIX_DATA (show_id,type,title,director,casting,country,date_added,release_year,rating,duration,listed_in,description), dime todos los filmes que tegan un director nulo. Con la consulta en un JSON."""},
                 {"role": "assistant", "content": "{\"sql\": \"SELECT * FROM TB_NETFLIX_DATA WHERE director IS NULL\"}"},
                 {"role": "user", "content": iPromptUser + ". Con la consulta en un JSON en el atributo sql."}
             ]
@@ -40,12 +40,15 @@ def nlp2sql(iPromptUser):
         vSql = json.loads(vJSON)["sql"]
     except Exception as ex:
         print("\tError procesing JSON: ", ex)
-        vJSON = re.findall(
-                r'\b(?<!\\)([\'"])[^\1]*?\1(?!\1)',
-                vJSON
-            )[0]
-        print("\tNew JSON: ", vJSON)
-        vSql = json.loads(vJSON)["sql"]
+        if "{" in vJSON and "}" in vJSON:
+            #vJSON = re.findall(r'\b(?<!\\)([\'"])[^\1]*?\1(?!\1)', vJSON)[0]
+            vTemp = vJSON.split("{")[1]
+            vTemp = vJSON.split("}")[0]
+            vJSON = "{" + vTemp + "}"
+            print("\tNew JSON: ", vJSON)
+            vSql = json.loads(vJSON)["sql"]
+        else:
+            vSql = "NOT SQL SENTENCE"
     return vSql
 
 vWindow = tk.Tk()
