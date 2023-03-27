@@ -16,7 +16,14 @@ def action_1(iEvent):
         print("")
         print("Prompt user: ", vPrompt)
         print("Processing...")
-        vSqlGenerated = nlp2sql(vPrompt)
+        vSqlGenerated = nlp2sql(
+            vPrompt,
+            "SQLLite",
+            "TB_NETFLIX_DATA",
+            "show_id,type,title,director,casting,country,date_added,release_year,rating,duration,listed_in,description",
+            "dime todos los filmes que tegan un director nulo",
+            "SELECT * FROM TB_NETFLIX_DATA WHERE director IS NULL"
+        )
         print("\tSQL generated: ", vSqlGenerated)
         print("\n")
         vDataFrame = pd.read_sql_query(vSqlGenerated, con = vDataBaseConnection)
@@ -24,19 +31,19 @@ def action_1(iEvent):
     except Exception as ex:
         print("Exception: ", ex)
 
-def nlp2sql(iPromptUser):
+def nlp2sql(iPromptUser : str, iDBMSType : str, iTableName : str, iTableFields : str, iExQuestion : str, iExSql : str):
     vResult = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
-                {"role": "system", "content": "Tu eres un bot que genera querys de SQLLite en JSON usando una entrada de texto en Español"},
-                {"role": "user", "content": """Tu tabla es TB_NETFLIX_DATA (show_id,type,title,director,casting,country,date_added,release_year,rating,duration,listed_in,description), dime todos los filmes que tegan un director nulo. Con la consulta en un JSON."""},
-                {"role": "assistant", "content": "{\"sql\": \"SELECT * FROM TB_NETFLIX_DATA WHERE director IS NULL\"}"},
+                {"role": "system", "content": "Tu eres un bot que genera querys de " + iDBMSType + " en JSON usando una entrada de texto en Español"},
+                {"role": "user", "content": "Tu tabla es " + iTableName + " (" + iTableFields + "), "+ iExQuestion + ". Con la consulta en un JSON."},
+                {"role": "assistant", "content": "{\"sql\": \"" + iExSql + "\"}"},
                 {"role": "user", "content": iPromptUser + ". Con la consulta en un JSON en el atributo sql."}
             ]
         )
     vJSON = vResult["choices"][0]["message"]["content"]
     try:
-        print("\tJSON generated: ", vJSON)
+        #print("\tJSON generated: ", vJSON)
         vSql = json.loads(vJSON)["sql"]
     except Exception as ex:
         print("\tError procesing JSON: ", ex)
@@ -48,7 +55,7 @@ def nlp2sql(iPromptUser):
             print("\tNew JSON: ", vJSON)
             vSql = json.loads(vJSON)["sql"]
         else:
-            vSql = "NOT SQL SENTENCE"
+            vSql = "NOT_SQL_SENTENCE"
     return vSql
 
 vWindow = tk.Tk()
