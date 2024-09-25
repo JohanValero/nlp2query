@@ -8,6 +8,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN test.py
+RUN python test.py
 
-CMD ["python", "app.py"]
+CMD ["python", "nlp2sql.py"]

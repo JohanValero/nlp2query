@@ -2,15 +2,17 @@ import os
 import re
 import json
 import pandas as pd
+import logging
 import sqlite3
 
 from collections import defaultdict
+from logging.handlers import RotatingFileHandler
 
 from langchain_google_genai import GoogleGenerativeAI
 from langchain import PromptTemplate
 from langchain_core.runnables.base import RunnableSequence
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 
 cSOURCE_JSON_FILE : str = "db_config_2.json"
@@ -259,24 +261,21 @@ def post_process_sql_query(sql_query):
 
 
 def execute_sql_query(query, db_path) -> pd.DataFrame:
-    conn = sqlite3.connect(db_path)
-    try:
+    with sqlite3.connect(db_path) as conn:
         df = pd.read_sql_query(query, conn)
-        return df
-    except Exception as e:
-        print(f"---   Error ejecutando la consulta: {e}")
-        return None
-    finally:
-        conn.close()
+    
+    return df
 
 def nlp2sql(p_prompt : str, p_structure : list[dict]) -> str:
+    logger.info(f"Iniciando nlp2sql con prompt: {p_prompt}")
+
     tables_info = []
     for table in p_structure['tables']:
         table_info = f"Table: {table['name']}\n"
         table_info += "Fields: " + ", ".join([field['name'] for field in table['fields']]) + "\n\n"
         tables_info.append(table_info)
     
-    tables_info_str : str = "\n".join(tables_info)
+    tables_info_str : str = "Una base de datos SQLite.\n\n" + "\n".join(tables_info)
 
     # 1. Detectar que campos se solicitan en el prompt
     fields_prompt = PromptTemplate(
@@ -299,6 +298,7 @@ Respuesta:"""
     )
     fields_chain = fields_prompt|llm
     requested_fields : str = fields_chain.invoke({"schema": tables_info_str, "prompt": p_prompt}).strip()
+    logger.info("requested_fields:" + str(requested_fields))
     
     # 2. Detectar los campos que complementen y/o enriquezcan los campos detectados
     enrich_prompt = PromptTemplate(
@@ -333,6 +333,7 @@ Respuesta: """
     enrich_chain : RunnableSequence = enrich_prompt|llm
     enriched_fields : str = enrich_chain.invoke({"schema": tables_info_str, "prompt": p_prompt, "requested_fields": ", ".join(requested_fields)}).strip()
     all_fields = requested_fields + enriched_fields
+    logger.info("enriched_fields:" + str(enriched_fields))
 
     # 3. Detectar los filtros necesarios según el prompt
     filters_prompt = PromptTemplate(
@@ -363,6 +364,7 @@ Respuesta: """
     )
     filters_chain = filters_prompt|llm
     filters = filters_chain.invoke({"schema": tables_info_str, "prompt": p_prompt}).strip()
+    logger.info("filters:" + str(filters))
     
     # 4. Identificar las tablas de donde obtener cada campo y filtro
     tables_prompt = PromptTemplate(
@@ -395,6 +397,7 @@ Respuesta: """
     )
     tables_chain = tables_prompt|llm
     table_mappings = tables_chain.invoke({"schema": tables_info_str, "prompt": p_prompt, "all_fields": ", ".join(all_fields), "filters": ", ".join(filters)}).strip()
+    logger.info("table_mappings:" + str(table_mappings))
     
     tables : list[str] = list(set(table_mappings.split(",")))
     tables : list[str] = [x.strip() for x in tables]
@@ -404,6 +407,7 @@ Respuesta: """
     join_info = f"Base Table: {join_structure['base_table']}\n"
     for join in join_structure['joins']:
         join_info += f"JOIN {join['table']} ON {join['condition']['left_table']}.{join['condition']['left_field']} = {join['condition']['right_table']}.{join['condition']['right_field']}\n"
+    logger.info("join_info:" + str(join_info))
 
     # 5. Identificar las funciones agrupadoras necesarias
     agg_prompt = PromptTemplate(
@@ -442,7 +446,8 @@ Respuesta:"""
     )
     agg_chain = agg_prompt|llm
     agg_functions = agg_chain.invoke({"schema": tables_info_str, "tables": table_mappings, "prompt": p_prompt, "all_fields": ", ".join(all_fields), "filters": ", ".join(filters)}).strip()
-    
+    logger.info("agg_functions:" + str(agg_functions))
+
     # 6. Generar consulta
     agg_prompt = PromptTemplate(
         input_variables=["schema", "prompt", "all_fields", "filters", "tables", "aggregations", "join"],
@@ -490,7 +495,8 @@ Respuesta:"""
         "aggregations": agg_functions,
         "join": join_structure
     }).strip()
-    
+    logger.info("sql_result:" + str(sql_result))
+
     return post_process_sql_query(sql_result), {
         "requested_fields": requested_fields,
         "enriched_fields": enriched_fields,
@@ -503,15 +509,36 @@ Respuesta:"""
 
 def nlp2data(p_prompt : str, p_structure : list[dict]) -> tuple[str, pd.DataFrame, dict]:
     sql_query, steps_info = nlp2sql(p_prompt, p_structure)
-    print("sql_query:", sql_query)
     
     df : pd.DataFrame = execute_sql_query(sql_query, p_structure["database_name"])
+    if df is not None:
+        logger.info("df.shape:" + str(df.shape))
+    else:
+        logger.error("No data in DataFrame retrieved.")
 
     return sql_query, df, steps_info
 
 llm = GoogleGenerativeAI(model="gemini-pro", temperature=0.1)
 
 cSQL_STRUCTURE : dict = load_database_structure(cSOURCE_JSON_FILE)
+
+def setup_logger():
+    log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logFile = 'nlp2sql.log'
+
+    my_handler = RotatingFileHandler(logFile, mode='a', maxBytes=5*1024*1024, 
+                                     backupCount=2, encoding=None, delay=0)
+    my_handler.setFormatter(log_formatter)
+    my_handler.setLevel(logging.DEBUG)
+
+    app_log = logging.getLogger('root')
+    app_log.setLevel(logging.DEBUG)
+
+    app_log.addHandler(my_handler)
+
+    return app_log
+
+logger = setup_logger()
 
 @app.route('/api/v0/generate_sql', methods=['GET'])
 def query():
@@ -529,7 +556,12 @@ def query():
             "records": df.to_dict(orient='records')
         })
     except Exception as e:
+        logger.error("error:", str(e))
         return jsonify({"error": str(e)}), 500
+
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 cPORT : int = os.getenv("PORT", 88)
 
