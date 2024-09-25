@@ -1,0 +1,187 @@
+{
+  "database_name": "facturacion.db",
+  "tables": [
+    {
+      "name": "Clientes",
+      "fields": [
+        { "name": "ClienteID", "type": "INTEGER", "primary_key": true },
+        { "name": "Nombre", "type": "VARCHAR(100)" },
+        { "name": "Apellido", "type": "VARCHAR(100)" },
+        { "name": "Email", "type": "VARCHAR(100)" },
+        { "name": "Telefono", "type": "VARCHAR(20)" },
+        { "name": "Direccion", "type": "VARCHAR(200)" },
+        { "name": "FechaRegistro", "type": "DATE" }
+      ]
+    },
+    {
+      "name": "CategoriasProductos",
+      "fields": [
+        { "name": "CategoriaID", "type": "INTEGER", "primary_key": true },
+        { "name": "NombreCategoria", "type": "VARCHAR(50)" },
+        { "name": "Descripcion", "type": "VARCHAR(200)" }
+      ]
+    },
+    {
+      "name": "Productos",
+      "fields": [
+        { "name": "ProductoID", "type": "INTEGER", "primary_key": true },
+        { "name": "CategoriaID", "type": "INTEGER" },
+        { "name": "NombreProducto", "type": "VARCHAR(100)" },
+        { "name": "Descripcion", "type": "VARCHAR(200)" },
+        { "name": "PrecioUnitario", "type": "DECIMAL(10, 2)" },
+        { "name": "Stock", "type": "INTEGER" }
+      ],
+      "foreign_keys": [{ "fields": ["CategoriaID"], "references": { "table": "CategoriasProductos", "fields": ["CategoriaID"]} }]
+    },
+    {
+      "name": "Facturas",
+      "fields": [
+        { "name": "FacturaID", "type": "INTEGER", "primary_key": true },
+        { "name": "ClienteID", "type": "INTEGER" },
+        { "name": "FechaEmision", "type": "DATE" },
+        { "name": "FechaVencimiento", "type": "DATE" },
+        { "name": "TotalFactura", "type": "DECIMAL(10, 2)" },
+        { "name": "EstadoPago", "type": "VARCHAR(20)" }
+      ],
+      "foreign_keys": [{ "fields": ["ClienteID"], "references": { "table": "Clientes", "fields": ["ClienteID"] } }]
+    },
+    {
+      "name": "DetallesFactura",
+      "fields": [
+        { "name": "DetalleID", "type": "INTEGER", "primary_key": true },
+        { "name": "FacturaID", "type": "INTEGER" },
+        { "name": "ProductoID", "type": "INTEGER" },
+        { "name": "Cantidad", "type": "INTEGER" },
+        { "name": "PrecioUnitario", "type": "DECIMAL(10, 2)" },
+        { "name": "Subtotal", "type": "DECIMAL(10, 2)" }
+      ],
+      "foreign_keys": [
+        { "fields": ["FacturaID"], "references": { "table": "Facturas", "fields": ["FacturaID"] } },
+        { "fields": ["ProductoID"], "references": { "table": "Productos", "fields": ["ProductoID"] } }
+      ]
+    },
+    {
+      "name": "Pagos",
+      "fields": [
+        { "name": "PagoID", "type": "INTEGER", "primary_key": true },
+        { "name": "FacturaID", "type": "INTEGER" },
+        { "name": "FechaPago", "type": "DATE" },
+        { "name": "MontoPagado", "type": "DECIMAL(10, 2)" },
+        { "name": "MetodoPago", "type": "VARCHAR(50)" }
+      ],
+      "foreign_keys": [{"fields": ["FacturaID"], "references": { "table": "Facturas", "fields": ["FacturaID"]}}]
+    },
+    {
+      "name": "MetodosPago",
+      "fields": [
+        { "name": "MetodoPagoID", "type": "INTEGER", "primary_key": true },
+        { "name": "NombreMetodo", "type": "VARCHAR(50)" },
+        { "name": "Descripcion", "type": "VARCHAR(100)" }
+      ]
+    },
+    {
+      "name": "Consumos",
+      "fields": [
+        { "name": "ConsumoID", "type": "INTEGER", "primary_key": true },
+        { "name": "ClienteID", "type": "INTEGER" },
+        { "name": "ProductoID", "type": "INTEGER" },
+        { "name": "FechaConsumo", "type": "DATE" },
+        { "name": "CantidadConsumida", "type": "DECIMAL(10, 2)" }
+      ],
+      "foreign_keys": [
+        {"fields": ["ClienteID"], "references": {"table": "Clientes", "fields": ["ClienteID"]}},
+        {"fields": ["ProductoID"], "references": {"table": "Productos", "fields": ["ProductoID"]}}
+      ]
+    },
+    {
+      "name": "Proveedores",
+      "fields": [
+        { "name": "ProveedorID", "type": "INTEGER", "primary_key": true },
+        { "name": "NombreProveedor", "type": "VARCHAR(100)" },
+        { "name": "ContactoNombre", "type": "VARCHAR(100)" },
+        { "name": "ContactoEmail", "type": "VARCHAR(100)" },
+        { "name": "ContactoTelefono", "type": "VARCHAR(20)" }
+      ]
+    },
+    {
+      "name": "ComprasProveedores",
+      "fields": [
+        { "name": "CompraID", "type": "INTEGER", "primary_key": true },
+        { "name": "ProveedorID", "type": "INTEGER" },
+        { "name": "FechaCompra", "type": "DATE" },
+        { "name": "TotalCompra", "type": "DECIMAL(10, 2)" }
+      ],
+      "foreign_keys": [{"fields": ["ProveedorID"], "references": {"table": "Proveedores", "fields": ["ProveedorID"]}}]
+    },
+    {
+      "name": "DetallesCompraProveedores",
+      "fields": [
+        {"name": "DetalleCompraID", "type": "INTEGER", "primary_key": true},
+        {"name": "CompraID", "type": "INTEGER"},
+        {"name": "ProductoID", "type": "INTEGER"},
+        {"name": "Cantidad", "type": "INTEGER"},
+        {"name": "PrecioUnitario", "type": "DECIMAL(10, 2)"},
+        {"name": "Subtotal", "type": "DECIMAL(10, 2)"}
+      ],
+      "foreign_keys": [
+        {"fields": ["CompraID"], "references": {"table": "ComprasProveedores", "fields": ["CompraID"]}},
+        {"fields": ["ProductoID"], "references": {"table": "Productos", "fields": ["ProductoID"]}}
+      ]
+    },
+    {
+      "name": "Devoluciones",
+      "fields": [
+        {"name": "DevolucionID", "type": "INTEGER", "primary_key": true},
+        {"name": "FacturaID", "type": "INTEGER"},
+        {"name": "FechaDevolucion", "type": "DATE"},
+        {"name": "MotivoDevolucion", "type": "VARCHAR(200)"}
+      ],
+      "foreign_keys": [{"fields": ["FacturaID"], "references": {"table": "Facturas", "fields": ["FacturaID"]}}]
+    },
+    {
+      "name": "DetallesDevolucion",
+      "fields": [
+        {"name": "DetalleDevolucionID", "type": "INTEGER", "primary_key": true},
+        {"name": "DevolucionID", "type": "INTEGER"},
+        {"name": "ProductoID", "type": "INTEGER"},
+        {"name": "Cantidad", "type": "INTEGER"},
+        {"name": "PrecioUnitario", "type": "DECIMAL(10, 2)"},
+        {"name": "Subtotal", "type": "DECIMAL(10, 2)"}
+      ],
+      "foreign_keys": [
+        {"fields": ["DevolucionID"], "references": {"table": "Devoluciones", "fields": ["DevolucionID"]}},
+        {"fields": ["ProductoID"], "references": {"table": "Productos", "fields": ["ProductoID"]}}
+      ]
+    },
+    {
+      "name": "Descuentos",
+      "fields": [
+        {"name": "DescuentoID", "type": "INTEGER", "primary_key": true},
+        {"name": "NombreDescuento", "type": "VARCHAR(100)"},
+        {"name": "TipoDescuento", "type": "VARCHAR(50)"},
+        {"name": "ValorDescuento", "type": "DECIMAL(10, 2)"},
+        {"name": "FechaInicio", "type": "DATE"},
+        {"name": "FechaFin", "type": "DATE"}
+      ]
+    },
+    {
+      "name": "Impuestos",
+      "fields": [
+        {"name": "ImpuestoID", "type": "INTEGER", "primary_key": true},
+        {"name": "NombreImpuesto", "type": "VARCHAR(50)"},
+        {"name": "Porcentaje", "type": "DECIMAL(5, 2)"}
+      ]
+    },
+    {
+      "name": "Empleados",
+      "fields": [
+        {"name": "EmpleadoID", "type": "INTEGER", "primary_key": true},
+        {"name": "Nombre", "type": "VARCHAR(100)"},
+        {"name": "Apellido", "type": "VARCHAR(100)"},
+        {"name": "Cargo", "type": "VARCHAR(50)"},
+        {"name": "FechaContratacion", "type": "DATE"},
+        {"name": "Salario", "type": "DECIMAL(10, 2)"}
+      ]
+    }
+  ]
+}

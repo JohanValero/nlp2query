@@ -1,0 +1,235 @@
+{
+  "database_name": "facturacion.db",
+  "tables": [
+    {
+      "name": "Clientes",
+      "deep": 0,
+      "functional_description": "Almacena información detallada sobre los clientes de la empresa, incluyendo sus datos de contacto y fecha de registro.",
+      "technical_description": "Tabla principal para la gestión de clientes. El campo 'ClienteID' es la clave primaria y se utiliza como referencia en otras tablas como 'Facturas' y 'Consumos'.",
+      "fields": [
+        { "name": "ClienteID", "type": "INTEGER", "primary_key": true },
+        { "name": "Nombre", "type": "VARCHAR(100)" },
+        { "name": "Apellido", "type": "VARCHAR(100)" },
+        { "name": "Email", "type": "VARCHAR(100)" },
+        { "name": "Telefono", "type": "VARCHAR(20)" },
+        { "name": "Direccion", "type": "VARCHAR(200)" },
+        { "name": "FechaRegistro", "type": "DATE" }
+      ]
+    },
+    {
+      "name": "CategoriasProductos",
+      "deep": 0,
+      "functional_description": "Contiene las diferentes categorías en las que se clasifican los productos de la empresa.",
+      "technical_description": "Tabla de referencia para categorizar productos. El campo 'CategoriaID' es la clave primaria y se utiliza en la tabla 'Productos' para establecer la categoría de cada producto.",
+      "fields": [
+        { "name": "CategoriaID", "type": "INTEGER", "primary_key": true },
+        { "name": "NombreCategoria", "type": "VARCHAR(50)" },
+        { "name": "Descripcion", "type": "VARCHAR(200)" }
+      ]
+    },
+    {
+      "name": "Productos",
+      "deep": 1,
+      "functional_description": "Almacena información detallada sobre los productos ofrecidos por la empresa, incluyendo su categoría, precio y stock.",
+      "technical_description": "Tabla principal para la gestión de productos. Tiene una clave foránea 'CategoriaID' que se relaciona con la tabla 'CategoriasProductos'.",
+      "fields": [
+        { "name": "ProductoID", "type": "INTEGER", "primary_key": true },
+        { "name": "CategoriaID", "type": "INTEGER" },
+        { "name": "NombreProducto", "type": "VARCHAR(100)" },
+        { "name": "Descripcion", "type": "VARCHAR(200)" },
+        { "name": "PrecioUnitario", "type": "DECIMAL(10, 2)" },
+        { "name": "Stock", "type": "INTEGER" }
+      ],
+      "foreign_keys": [{ "fields": ["CategoriaID"], "references": { "table": "CategoriasProductos", "fields": ["CategoriaID"]} }]
+    },
+    {
+      "name": "Facturas",
+      "deep": 1,
+      "functional_description": "Registra las facturas emitidas a los clientes, incluyendo información sobre fechas, total y estado de pago.",
+      "technical_description": "Tabla principal para el registro de facturas. Tiene una clave foránea 'ClienteID' que se relaciona con la tabla 'Clientes'.",
+      "fields": [
+        { "name": "FacturaID", "type": "INTEGER", "primary_key": true },
+        { "name": "ClienteID", "type": "INTEGER" },
+        { "name": "FechaEmision", "type": "DATE" },
+        { "name": "FechaVencimiento", "type": "DATE" },
+        { "name": "TotalFactura", "type": "DECIMAL(10, 2)" },
+        { "name": "EstadoPago", "type": "VARCHAR(20)" }
+      ],
+      "foreign_keys": [{ "fields": ["ClienteID"], "references": { "table": "Clientes", "fields": ["ClienteID"] } }]
+    },
+    {
+      "name": "DetallesFactura",
+      "deep": 2,
+      "functional_description": "Almacena los detalles específicos de cada producto incluido en una factura.",
+      "technical_description": "Tabla de unión entre 'Facturas' y 'Productos'. Tiene claves foráneas que se relacionan con ambas tablas.",
+      "fields": [
+        { "name": "DetalleID", "type": "INTEGER", "primary_key": true },
+        { "name": "FacturaID", "type": "INTEGER" },
+        { "name": "ProductoID", "type": "INTEGER" },
+        { "name": "Cantidad", "type": "INTEGER" },
+        { "name": "PrecioUnitario", "type": "DECIMAL(10, 2)" },
+        { "name": "Subtotal", "type": "DECIMAL(10, 2)" }
+      ],
+      "foreign_keys": [
+        { "fields": ["FacturaID"], "references": { "table": "Facturas", "fields": ["FacturaID"] } },
+        { "fields": ["ProductoID"], "references": { "table": "Productos", "fields": ["ProductoID"] } }
+      ]
+    },
+    {
+      "name": "Pagos",
+      "deep": 2,
+      "functional_description": "Registra los pagos realizados por los clientes para las facturas emitidas.",
+      "technical_description": "Tabla que almacena información de pagos. Tiene una clave foránea 'FacturaID' que se relaciona con la tabla 'Facturas'.",
+      "fields": [
+        { "name": "PagoID", "type": "INTEGER", "primary_key": true },
+        { "name": "FacturaID", "type": "INTEGER" },
+        { "name": "FechaPago", "type": "DATE" },
+        { "name": "MontoPagado", "type": "DECIMAL(10, 2)" },
+        { "name": "MetodoPago", "type": "VARCHAR(50)" }
+      ],
+      "foreign_keys": [{"fields": ["FacturaID"], "references": { "table": "Facturas", "fields": ["FacturaID"]}}]
+    },
+    {
+      "name": "MetodosPago",
+      "deep": 0,
+      "functional_description": "Contiene los diferentes métodos de pago disponibles para los clientes.",
+      "technical_description": "Tabla de referencia para los métodos de pago. No tiene relaciones directas con otras tablas, pero se utiliza como referencia en la tabla 'Pagos'.",
+      "fields": [
+        { "name": "MetodoPagoID", "type": "INTEGER", "primary_key": true },
+        { "name": "NombreMetodo", "type": "VARCHAR(50)" },
+        { "name": "Descripcion", "type": "VARCHAR(100)" }
+      ]
+    },
+    {
+      "name": "Consumos",
+      "deep": 2,
+      "functional_description": "Registra los consumos de productos o servicios recurrentes por parte de los clientes.",
+      "technical_description": "Tabla que relaciona clientes con productos consumidos. Tiene claves foráneas que se relacionan con las tablas 'Clientes' y 'Productos'.",
+      "fields": [
+        { "name": "ConsumoID", "type": "INTEGER", "primary_key": true },
+        { "name": "ClienteID", "type": "INTEGER" },
+        { "name": "ProductoID", "type": "INTEGER" },
+        { "name": "FechaConsumo", "type": "DATE" },
+        { "name": "CantidadConsumida", "type": "DECIMAL(10, 2)" }
+      ],
+      "foreign_keys": [
+        {"fields": ["ClienteID"], "references": {"table": "Clientes", "fields": ["ClienteID"]}},
+        {"fields": ["ProductoID"], "references": {"table": "Productos", "fields": ["ProductoID"]}}
+      ]
+    },
+    {
+      "name": "Proveedores",
+      "deep": 0,
+      "functional_description": "Almacena información sobre los proveedores de la empresa.",
+      "technical_description": "Tabla principal para la gestión de proveedores. El campo 'ProveedorID' es la clave primaria y se utiliza como referencia en la tabla 'ComprasProveedores'.",
+      "fields": [
+        { "name": "ProveedorID", "type": "INTEGER", "primary_key": true },
+        { "name": "NombreProveedor", "type": "VARCHAR(100)" },
+        { "name": "ContactoNombre", "type": "VARCHAR(100)" },
+        { "name": "ContactoEmail", "type": "VARCHAR(100)" },
+        { "name": "ContactoTelefono", "type": "VARCHAR(20)" }
+      ]
+    },
+    {
+      "name": "ComprasProveedores",
+      "deep": 1,
+      "functional_description": "Registra las compras realizadas a los proveedores.",
+      "technical_description": "Tabla que almacena información de compras a proveedores. Tiene una clave foránea 'ProveedorID' que se relaciona con la tabla 'Proveedores'.",
+      "fields": [
+        { "name": "CompraID", "type": "INTEGER", "primary_key": true },
+        { "name": "ProveedorID", "type": "INTEGER" },
+        { "name": "FechaCompra", "type": "DATE" },
+        { "name": "TotalCompra", "type": "DECIMAL(10, 2)" }
+      ],
+      "foreign_keys": [{"fields": ["ProveedorID"], "references": {"table": "Proveedores", "fields": ["ProveedorID"]}}]
+    },
+    {
+      "name": "DetallesCompraProveedores",
+      "deep": 2,
+      "functional_description": "Almacena los detalles específicos de cada producto incluido en una compra a proveedores.",
+      "technical_description": "Tabla de unión entre 'ComprasProveedores' y 'Productos'. Tiene claves foráneas que se relacionan con ambas tablas.",
+      "fields": [
+        {"name": "DetalleCompraID", "type": "INTEGER", "primary_key": true},
+        {"name": "CompraID", "type": "INTEGER"},
+        {"name": "ProductoID", "type": "INTEGER"},
+        {"name": "Cantidad", "type": "INTEGER"},
+        {"name": "PrecioUnitario", "type": "DECIMAL(10, 2)"},
+        {"name": "Subtotal", "type": "DECIMAL(10, 2)"}
+      ],
+      "foreign_keys": [
+        {"fields": ["CompraID"], "references": {"table": "ComprasProveedores", "fields": ["CompraID"]}},
+        {"fields": ["ProductoID"], "references": {"table": "Productos", "fields": ["ProductoID"]}}
+      ]
+    },
+    {
+      "name": "Devoluciones",
+      "deep": 2,
+      "functional_description": "Registra las devoluciones de productos realizadas por los clientes.",
+      "technical_description": "Tabla que almacena información de devoluciones. Tiene una clave foránea 'FacturaID' que se relaciona con la tabla 'Facturas'.",
+      "fields": [
+        {"name": "DevolucionID", "type": "INTEGER", "primary_key": true},
+        {"name": "FacturaID", "type": "INTEGER"},
+        {"name": "FechaDevolucion", "type": "DATE"},
+        {"name": "MotivoDevolucion", "type": "VARCHAR(200)"}
+      ],
+      "foreign_keys": [{"fields": ["FacturaID"], "references": {"table": "Facturas", "fields": ["FacturaID"]}}]
+    },
+    {
+      "name": "DetallesDevolucion",
+      "deep": 3,
+      "functional_description": "Almacena los detalles específicos de cada producto devuelto en una devolución.",
+      "technical_description": "Tabla de unión entre 'Devoluciones' y 'Productos'. Tiene claves foráneas que se relacionan con ambas tablas.",
+      "fields": [
+        {"name": "DetalleDevolucionID", "type": "INTEGER", "primary_key": true},
+        {"name": "DevolucionID", "type": "INTEGER"},
+        {"name": "ProductoID", "type": "INTEGER"},
+        {"name": "Cantidad", "type": "INTEGER"},
+        {"name": "PrecioUnitario", "type": "DECIMAL(10, 2)"},
+        {"name": "Subtotal", "type": "DECIMAL(10, 2)"}
+      ],
+      "foreign_keys": [
+        {"fields": ["DevolucionID"], "references": {"table": "Devoluciones", "fields": ["DevolucionID"]}},
+        {"fields": ["ProductoID"], "references": {"table": "Productos", "fields": ["ProductoID"]}}
+      ]
+    },
+    {
+      "name": "Descuentos",
+      "deep": 0,
+      "functional_description": "Contiene información sobre los diferentes descuentos aplicables a los productos o servicios.",
+      "technical_description": "Tabla independiente que almacena los tipos de descuentos disponibles. No tiene relaciones directas con otras tablas, pero se puede utilizar en lógica de negocio para aplicar descuentos en facturas o productos.",
+      "fields": [
+        {"name": "DescuentoID", "type": "INTEGER", "primary_key": true},
+        {"name": "NombreDescuento", "type": "VARCHAR(100)"},
+        {"name": "TipoDescuento", "type": "VARCHAR(50)"},
+        {"name": "ValorDescuento", "type": "DECIMAL(10, 2)"},
+        {"name": "FechaInicio", "type": "DATE"},
+        {"name": "FechaFin", "type": "DATE"}
+      ]
+    },
+    {
+      "name": "Impuestos",
+      "deep": 0,
+      "functional_description": "Almacena los diferentes tipos de impuestos aplicables a los productos o servicios.",
+      "technical_description": "Tabla independiente que contiene información sobre impuestos. No tiene relaciones directas con otras tablas, pero se utiliza en cálculos de precios y facturas.",
+      "fields": [
+        {"name": "ImpuestoID", "type": "INTEGER", "primary_key": true},
+        {"name": "NombreImpuesto", "type": "VARCHAR(50)"},
+        {"name": "Porcentaje", "type": "DECIMAL(5, 2)"}
+      ]
+    },
+    {
+      "name": "Empleados",
+      "deep": 0,
+      "functional_description": "Contiene información sobre los empleados de la empresa.",
+      "technical_description": "Tabla independiente para la gestión de empleados. No tiene relaciones directas con otras tablas en este esquema, pero podría ser utilizada para seguimiento de ventas, atención al cliente, etc.",
+      "fields": [
+        {"name": "EmpleadoID", "type": "INTEGER", "primary_key": true},
+        {"name": "Nombre", "type": "VARCHAR(100)"},
+        {"name": "Apellido", "type": "VARCHAR(100)"},
+        {"name": "Cargo", "type": "VARCHAR(50)"},
+        {"name": "FechaContratacion", "type": "DATE"},
+        {"name": "Salario", "type": "DECIMAL(10, 2)"}
+      ]
+    }
+  ]
+}
