@@ -8,7 +8,7 @@ from langchain_google_genai import GoogleGenerativeAI
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 
-cGEMINI_API_KEY : str = "AIzaSyA9EZVsrkcU25TYYkGLF6t_BCrcGJE4zwk"
+cGEMINI_API_KEY : str = ""
 
 def calculate_table_depth(structure):
     # Initialize all tables with depth 0

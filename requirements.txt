@@ -3,3 +3,6 @@ scikit-learn
 numpy
 langchain
 langchain-google-genai
+flask
+Flask-Cors
+pandas

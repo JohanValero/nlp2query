@@ -10,10 +10,13 @@ from langchain_google_genai import GoogleGenerativeAI
 from langchain import PromptTemplate
 from langchain_core.runnables.base import RunnableSequence
 
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 
 cSOURCE_JSON_FILE : str = "db_config_2.json"
 
-os.environ["GOOGLE_API_KEY"] = "AIzaSyAgLli-iyNlndMZy6GBsKZrQwm_DVAWzzY"
+app = Flask(__name__)
+CORS(app)
 
 def calculate_depth(p_sql_structure : dict) -> None:
     tables : list[dict] = p_sql_structure["tables"]
@@ -267,9 +270,6 @@ def execute_sql_query(query, db_path) -> pd.DataFrame:
         conn.close()
 
 def nlp2sql(p_prompt : str, p_structure : list[dict]) -> str:
-    print("")
-    print("p_prompt:", p_prompt)
-
     tables_info = []
     for table in p_structure['tables']:
         table_info = f"Table: {table['name']}\n"
@@ -299,9 +299,7 @@ Respuesta:"""
     )
     fields_chain = fields_prompt|llm
     requested_fields : str = fields_chain.invoke({"schema": tables_info_str, "prompt": p_prompt}).strip()
-    print("--> requested_fields:")
-    print(requested_fields)
-
+    
     # 2. Detectar los campos que complementen y/o enriquezcan los campos detectados
     enrich_prompt = PromptTemplate(
         input_variables=["schema", "prompt", "requested_fields"],
@@ -334,8 +332,6 @@ Respuesta: """
     )
     enrich_chain : RunnableSequence = enrich_prompt|llm
     enriched_fields : str = enrich_chain.invoke({"schema": tables_info_str, "prompt": p_prompt, "requested_fields": ", ".join(requested_fields)}).strip()
-    print("--> enriched_fields:")
-    print(enriched_fields)
     all_fields = requested_fields + enriched_fields
 
     # 3. Detectar los filtros necesarios según el prompt
@@ -367,8 +363,7 @@ Respuesta: """
     )
     filters_chain = filters_prompt|llm
     filters = filters_chain.invoke({"schema": tables_info_str, "prompt": p_prompt}).strip()
-    print("--> filters:", filters)
-
+    
     # 4. Identificar las tablas de donde obtener cada campo y filtro
     tables_prompt = PromptTemplate(
         input_variables=["schema", "prompt", "all_fields", "filters"],
@@ -400,7 +395,6 @@ Respuesta: """
     )
     tables_chain = tables_prompt|llm
     table_mappings = tables_chain.invoke({"schema": tables_info_str, "prompt": p_prompt, "all_fields": ", ".join(all_fields), "filters": ", ".join(filters)}).strip()
-    print("--> table_mappings:", table_mappings)
     
     tables : list[str] = list(set(table_mappings.split(",")))
     tables : list[str] = [x.strip() for x in tables]
@@ -448,8 +442,6 @@ Respuesta:"""
     )
     agg_chain = agg_prompt|llm
     agg_functions = agg_chain.invoke({"schema": tables_info_str, "tables": table_mappings, "prompt": p_prompt, "all_fields": ", ".join(all_fields), "filters": ", ".join(filters)}).strip()
-    print("--> agg_functions:", agg_functions)
-
     
     # 6. Generar consulta
     agg_prompt = PromptTemplate(
@@ -499,29 +491,52 @@ Respuesta:"""
         "join": join_structure
     }).strip()
     
-    return post_process_sql_query(sql_result)
+    return post_process_sql_query(sql_result), {
+        "requested_fields": requested_fields,
+        "enriched_fields": enriched_fields,
+        "filters": filters,
+        "table_mappings": table_mappings,
+        "join_info": join_info,
+        "agg_functions": agg_functions,
+        "sql_result": sql_result
+    }
 
-def nlp2data(p_prompt : str, p_structure : list[dict]) -> pd.DataFrame:
-    sql_query : str = nlp2sql(p_prompt, p_structure)
+def nlp2data(p_prompt : str, p_structure : list[dict]) -> tuple[str, pd.DataFrame, dict]:
+    sql_query, steps_info = nlp2sql(p_prompt, p_structure)
     print("sql_query:", sql_query)
     
     df : pd.DataFrame = execute_sql_query(sql_query, p_structure["database_name"])
 
-    print("df:")
-    print(df)
-
-    return df
+    return sql_query, df, steps_info
 
 llm = GoogleGenerativeAI(model="gemini-pro", temperature=0.1)
 
-def test():
-    sql_structure : dict = load_database_structure(cSOURCE_JSON_FILE)
-    print("sql_structure:")
-    print_schema_info(sql_structure)
+cSQL_STRUCTURE : dict = load_database_structure(cSOURCE_JSON_FILE)
 
-    nlp2data("Muestra un informe de los 5 proveedores principales, incluyendo el total de compras realizadas, el producto más comprado a cada uno y el último pedido.", sql_structure)
+@app.route('/api/v0/generate_sql', methods=['GET'])
+def query():
+    prompt : str | None = request.args.get('prompt')
+    
+    if not prompt:
+        return jsonify({"error": "No se proporcionó un prompt"}), 400
+    
+    try:
+        sql_query, df, steps_info = nlp2data(prompt, cSQL_STRUCTURE)
+        return jsonify({
+            "promt": prompt,
+            "sql": sql_query,
+            "steps_info": steps_info,
+            "records": df.to_dict(orient='records')
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+cPORT : int = os.getenv("PORT", 88)
+
+if not cPORT:
+    raise ValueError
 
 if __name__ == "__main__":
-    #main()
-    pass
+    print("GOOGLE_API_KEY:", os.getenv("GOOGLE_API_KEY"))
+    app.run(host="0.0.0.0", port=cPORT)
 
